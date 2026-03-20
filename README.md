@@ -1,6 +1,6 @@
 # AI Skills Library 🤖
 
-面向 VS Code Copilot 的自定义 Skill 集合，用于增强编码、写作和分析效率。
+面向 VS Code Copilot 的自定义 Skill 集合，支持**公共 Skill + 项目专属 Skill** 双层架构。
 
 > 架构详情请参阅 [Skill-Architecture_Design.md](Skill-Architecture_Design.md)
 
@@ -8,50 +8,66 @@
 
 ```
 .github/
-  skills/                         # VS Code Skill 存放区
-    xf-review/                    # 代码审查 Skill
-      SKILL.md
-      references/
+  skills/                         # VS Code Skill 发现区（公共 + 项目专属）
+    xf-review/                    # [公共] 代码审查
+    xf-project-ctx/               # [公共] 项目上下文加载器/调度器
+    demo-review/ → (symlink)      # [项目专属] 由 sync 脚本链接
+  instructions/                   # File Instructions（自动注入）
+    project-context.instructions.md
+projects/                         # 子项目区
+  demo-project/                   # 示例子项目
+    context/                      # 项目上下文 .md 文档
+    skills/                       # 项目专属 Skill 源码
+    src/                          # 项目源码
+scripts/                          # 运维脚本
+  sync-project-skills.sh          # 同步项目 Skill → .github/skills/
 shared/                           # 跨 Skill 共享资源
-  standards/                      # 团队规范
-  templates/skill-template/       # 新 Skill 脚手架
-  utils/                          # 通用脚本（预留）
 docs/                             # 开发文档
-  how-to-create-skill.md          # 创建指南
-  best-practices.md               # 最佳实践
-  troubleshooting.md              # 问题排查
-CHANGELOG.md                      # 全局变更日志
-Skill-Architecture_Design.md      # 架构设计文档
 ```
 
 ## 📋 可用 Skills
 
+### 公共 Skill
+
 | Skill | 版本 | 斜杠命令 | 说明 |
 |-------|------|---------|------|
-| xf-review | v1.0.0 | `/xf-review` | 代码审查：安全性、性能、最佳实践 |
+| xf-review | v1.0.0 | `/xf-review` | 通用代码审查 |
+| xf-project-ctx | v1.0.0 | `/xf-project-ctx` | 项目上下文加载 + 项目 Skill 调度 |
+
+### 项目专属 Skill
+
+| Skill | 所属项目 | 斜杠命令 | 说明 |
+|-------|---------|---------|------|
+| demo-review | demo-project | `/demo-review` | 结合项目上下文的代码审查 |
 
 ## 🚀 使用方法
 
-1. 将本仓库克隆或放置到你的项目根目录
-2. 确保 `.github/skills/` 目录存在于工作区中
-3. 在 Copilot Chat 中输入 `/` 即可看到可用 Skill
-4. 或直接在对话中使用关键词（如 "code review"、"security check"）触发
+### 日常使用
 
-## 🛠 创建新 Skill
+1. 在 Copilot Chat 输入 `/xf-project-ctx demo-project` 加载项目上下文
+2. 然后使用 `/demo-review` 进行项目专属代码审查
+3. 或直接在对话中描述需求，Agent 会自动匹配合适的 Skill
+
+### Linux 服务器同步
+
+```bash
+# 拉取最新代码后，同步项目 Skill
+git pull
+bash scripts/sync-project-skills.sh
+```
+
+## 🛠 添加新子项目
+
+1. 在 `projects/` 下创建项目目录
+2. 在 `context/` 下编写项目上下文 `.md` 文件
+3. 在 `skills/` 下开发项目专属 Skill
+4. 运行 `bash scripts/sync-project-skills.sh` 注册
 
 详见 [docs/how-to-create-skill.md](docs/how-to-create-skill.md)
 
-快速开始：
-
-```powershell
-Copy-Item -Recurse shared/templates/skill-template .github/skills/<skill-name>
-Rename-Item .github/skills/<skill-name>/SKILL.md.template SKILL.md
-# 编辑 SKILL.md，修改 name、description、正文
-```
-
 ## 📚 文档
 
-- [架构设计](Skill-Architecture_Design.md) — 整体架构、目录规范、设计原则
+- [架构设计](Skill-Architecture_Design.md) — 双层架构、子项目机制、同步策略
 - [创建指南](docs/how-to-create-skill.md) — 从零创建 Skill 的完整步骤
 - [最佳实践](docs/best-practices.md) — 设计原则与反模式清单
 - [问题排查](docs/troubleshooting.md) — Skill 无法识别等常见问题解决

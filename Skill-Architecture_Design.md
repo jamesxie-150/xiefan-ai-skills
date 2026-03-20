@@ -1,6 +1,6 @@
 # Skill 架构设计文档
 
-> 版本：v1.0.0 | 作者：James | 日期：2026-03-20
+> 版本：v2.0.0 | 作者：James | 日期：2026-03-20
 >
 > 参考：[Claude Skills 实战：如何为团队构建专属 AI 能力](https://www.80aj.com/2025/10/20/claude-skills%e5%ae%9e%e6%88%98%ef%bc%9a%e5%a6%82%e4%bd%95%e4%b8%ba%e5%9b%a2%e9%98%9f%e6%9e%84%e5%bb%ba%e4%b8%93%e5%b1%9eai%e8%83%bd%e5%8a%9b/) — Toy's Tech Notes
 
@@ -11,58 +11,59 @@
 1. **VS Code 原生兼容** — 所有 Skill 严格遵循 `.github/skills/<name>/SKILL.md` 规范，确保 Copilot Agent 可自动发现、加载和触发。
 2. **单一职责** — 每个 Skill 只做一件事，通过组合实现复杂工作流。
 3. **渐进加载** — 利用 VS Code 的三级加载机制（Discovery → Instructions → Resources），控制 context 消耗。
-4. **团队可协作** — 共享资源集中管理，支持多人并行开发不同 Skill。
-5. **可迭代** — 语义化版本管理 + CHANGELOG，支持平滑升级。
+4. **公共 + 项目双层架构** — 公共 Skill 提供通用能力，项目专属 Skill 结合项目上下文提供针对性能力。
+5. **团队可协作** — 共享资源集中管理，项目团队独立开发各自 Skill，通过同步脚本统一注册。
+6. **可迭代** — 语义化版本管理 + CHANGELOG，支持平滑升级。
 
 ---
 
 ## 2. 目录结构
 
 ```
-xiefan-ai-skills/                          # 仓库根目录
+xiefan-ai-skills/                          # 仓库根目录（Linux 工作区）
 ├── README.md                              # 项目总览与使用指南
 ├── Skill-Architecture_Design.md           # 本文档：架构设计说明
 ├── CHANGELOG.md                           # 全局变更日志
 │
 ├── .github/
-│   ├── skills/                            # ★ VS Code Skill 存放区（核心）
-│   │   ├── xf-review/                    # Skill: 代码审查
-│   │   │   ├── SKILL.md                  # 入口文件（YAML frontmatter + Markdown）
-│   │   │   ├── references/               # 参考资料（按需加载）
-│   │   │   │   ├── coding-standards.md
-│   │   │   │   └── good-review-example.md
-│   │   │   └── scripts/                  # 可执行脚本（按需加载）
-│   │   │       └── (预留)
-│   │   │
-│   │   ├── xf-doc-gen/                   # Skill: 文档生成（规划中）
-│   │   │   ├── SKILL.md
-│   │   │   ├── references/
-│   │   │   └── templates/
-│   │   │
-│   │   └── xf-debug/                     # Skill: 调试助手（规划中）
-│   │       ├── SKILL.md
-│   │       ├── references/
-│   │       └── scripts/
+│   ├── skills/                            # ★ VS Code Skill 发现区（所有可用 Skill）
+│   │   ├── xf-review/                    # [公共] 代码审查
+│   │   ├── xf-project-ctx/              # [公共] 项目上下文加载器/调度器
+│   │   └── demo-review/ → (symlink)      # [项目专属] 由同步脚本链接
+│   │
+│   ├── instructions/                      # File Instructions（自动注入）
+│   │   └── project-context.instructions.md  # 处理 projects/** 文件时自动加载
 │   │
 │   └── workflows/                         # GitHub Actions CI/CD
-│       └── skill-validation.yml           # Skill 格式校验 & 安全扫描
+│       └── skill-validation.yml
+│
+├── projects/                              # ★ 子项目区（项目上下文 + 专属 Skill）
+│   ├── demo-project/                      # 示例子项目
+│   │   ├── context/                       # 项目上下文文档（.md）
+│   │   │   ├── project-overview.md        #   项目概述
+│   │   │   ├── architecture.md            #   系统架构
+│   │   │   ├── tech-stack.md              #   技术栈
+│   │   │   └── api-spec.md               #   API 规范
+│   │   ├── skills/                        # 项目专属 Skill 源码
+│   │   │   └── demo-review/              #   项目专属代码审查
+│   │   │       ├── SKILL.md
+│   │   │       └── references/
+│   │   └── src/                           # 项目源码
+│   │
+│   └── <other-project>/                   # 其他子项目（同结构）
+│
+├── scripts/                               # 运维脚本
+│   └── sync-project-skills.sh             # 同步项目 Skill → .github/skills/
 │
 ├── shared/                                # 跨 Skill 共享资源
 │   ├── standards/                         # 团队规范
-│   │   ├── coding-standards.md
-│   │   ├── api-guidelines.md
-│   │   └── security-checklist.md
-│   ├── templates/                         # 通用模板
-│   │   └── skill-template/               # 新 Skill 脚手架
-│   │       ├── SKILL.md.template
-│   │       └── README.md
+│   ├── templates/skill-template/          # 新 Skill 脚手架
 │   └── utils/                             # 通用脚本
-│       └── (预留)
 │
 └── docs/                                  # 项目文档
-    ├── how-to-create-skill.md             # 如何创建新 Skill
-    ├── best-practices.md                  # 最佳实践
-    └── troubleshooting.md                 # 常见问题排查
+    ├── how-to-create-skill.md
+    ├── best-practices.md
+    └── troubleshooting.md
 ```
 
 ### 关键约束
@@ -73,7 +74,10 @@ xiefan-ai-skills/                          # 仓库根目录
 | `name` 字段 = 文件夹名 | 小写字母 + 连字符，1-64 字符，如 `xf-review` |
 | SKILL.md 必须为 Markdown | YAML frontmatter（`---`）仅包含元数据，正文为 Markdown |
 | 资源文件只深入一级 | 从 SKILL.md 引用的文件应在 `./references/`、`./scripts/`、`./templates/` 下 |
-| Skill 自包含 | 每个 Skill 文件夹内包含自身所需的全部资源，不依赖外部相对路径 |
+| 公共 Skill 前缀 `xf-` | 如 `xf-review`、`xf-project-ctx` |
+| 项目 Skill 前缀 `<项目缩写>-` | 如 `demo-review`、`alpha-deploy` |
+| 项目上下文在 `projects/<name>/context/` | Agent 通过读取此目录获取项目背景 |
+| 项目 Skill 源码在 `projects/<name>/skills/` | 通过 `sync-project-skills.sh` 链接到 `.github/skills/` |
 
 ---
 
@@ -167,15 +171,17 @@ shared/standards/coding-standards.md       ← 源头（团队维护）
 
 ### Skill 命名
 
-| 模式 | 示例 | 说明 |
-|------|------|------|
-| `xf-<功能>` | `xf-review`, `xf-debug` | 个人前缀，用于标识作者 |
-| `<功能>-<子类>` | `code-review`, `api-review` | 通用命名风格 |
+| 类型 | 前缀模式 | 示例 | 说明 |
+|------|---------|------|------|
+| 公共 Skill | `xf-<功能>` | `xf-review`, `xf-project-ctx` | 通用能力，所有项目可用 |
+| 项目专属 Skill | `<项目缩写>-<功能>` | `demo-review`, `alpha-deploy` | 结合项目上下文的专属能力 |
 
 **规则**：
 - 仅使用小写字母、数字和连字符
 - 长度 1-64 字符
 - 必须与文件夹名完全一致
+- **公共 Skill** 以 `xf-` 前缀标识
+- **项目 Skill** 以项目缩写为前缀
 
 ### Description 关键词设计
 
@@ -196,17 +202,150 @@ description: "代码审查助手。Use when: code review, lint, security check, 
 
 ---
 
-## 6. 现有 Skill 清单
+## 6. 子项目架构（核心机制）
 
-| Skill | 版本 | 斜杠命令 | 状态 | 说明 |
-|-------|------|---------|------|------|
-| xf-review | v1.0.0 | `/xf-review` | ✅ 可用 | 代码审查：安全性、性能、最佳实践 |
-| xf-doc-gen | — | `/xf-doc-gen` | 📋 规划中 | 技术文档生成 |
-| xf-debug | — | `/xf-debug` | 📋 规划中 | 调试分析助手 |
+### 6.1 部署模型
+
+```
+团队成员 (PC)                         Linux 服务器 (工作区)
+┌──────────────┐                     ┌─────────────────────────────────┐
+│  本地开发      │    git push        │  xiefan-ai-skills/              │
+│  Skill 源码    │ ───────────────→   │  ├── .github/skills/ (所有Skill) │
+│  项目上下文    │                     │  ├── projects/  (子项目区)      │
+└──────┬───────┘                     │  └── ...                        │
+       │                              └──────────────┬──────────────────┘
+       │                                             │
+       │ VS Code Remote SSH                          │ Copilot Agent
+       └─────────────────────────────→ 使用 Skill 完成工作
+```
+
+- 团队成员在本地开发公共 Skill 和项目专属 Skill，推送到远端分支
+- 在 Linux 服务器上 `git pull` 拉取最新代码
+- 运行 `bash scripts/sync-project-skills.sh` 同步项目 Skill 到 `.github/skills/`
+- 通过 PC 上的 VS Code Remote SSH 连接 Linux，使用 Copilot 调用 Skill
+
+### 6.2 两层 Skill 架构
+
+```
+                    ┌───────────────────────────┐
+                    │     公共 Skill 层         │
+                    │  xf-review (通用审查)     │
+                    │  xf-project-ctx (调度器)  │
+                    └─────────┬─────────────────┘
+                              │ 加载项目上下文 + 发现项目 Skill
+                              ▼
+          ┌───────────────────┴───────────────────┐
+          │           项目专属 Skill 层           │
+          │                                       │
+  ┌───────┴───────┐                      ┌───────┴───────┐
+  │ demo-project  │                      │ alpha-project │
+  │               │                      │               │
+  │ context/      │ ← Agent 读取上下文    │ context/      │
+  │ demo-review   │ ← 结合上下文审查      │ alpha-deploy  │
+  └───────────────┘                      └───────────────┘
+```
+
+**调用链路**：
+
+1. 用户在 Copilot Chat 中提到项目关键词
+2. 公共 `xf-project-ctx` 被触发，读取 `projects/<name>/context/*.md`
+3. Agent 获得项目上下文后，自动匹配项目专属 Skill
+4. 项目专属 Skill 在项目上下文基础上执行专项任务
+
+### 6.3 子项目目录规范
+
+每个子项目必须遵循以下结构：
+
+```
+projects/<项目名>/
+├── context/                    # 必需：项目上下文文档
+│   ├── project-overview.md    # 推荐：项目概述（最先被读取）
+│   ├── architecture.md        # 推荐：系统架构
+│   ├── tech-stack.md          # 推荐：技术栈
+│   ├── api-spec.md            # 推荐：API 规范
+│   └── *.md                   # 其他项目特定文档
+├── skills/                    # 可选：项目专属 Skill 源码
+│   └── <项目缩写>-<功能>/
+│       ├── SKILL.md
+│       └── references/
+└── src/                       # 可选：项目源码或链接
+```
+
+**上下文文档编写要点**：
+
+| 要求 | 说明 |
+|------|------|
+| 文件格式 | 纯 Markdown (.md) |
+| 单文件行数 | 建议 ≤ 200 行 |
+| 总文件数 | 建议 ≤ 10 个（控制 context 开销） |
+| 内容要求 | 包含具体技术细节（端口、版本、地址），而非泛泛描述 |
+| 更新频率 | 架构变更时同步更新 |
+
+### 6.4 项目 Skill 如何读取上下文
+
+项目专属 Skill 通过 SKILL.md 正文指令告诉 Agent 读取项目上下文：
+
+```markdown
+## Before You Start — 加载项目上下文
+
+**必须**先读取项目上下文文档：
+
+1. 读取 `projects/demo-project/context/project-overview.md`
+2. 读取 `projects/demo-project/context/architecture.md`
+3. 读取 `projects/demo-project/context/tech-stack.md`
+4. 读取 `projects/demo-project/context/api-spec.md`
+```
+
+Agent 会使用其内置的文件读取能力，访问工作区内的任意文件。这不受 Skill `references/` 的一级引用限制 —— 那是 VS Code 自动加载机制的限制，而 Agent 的工具调用可以读取工作区内任何路径。
+
+### 6.5 同步机制
+
+项目团队在 `projects/<name>/skills/` 下开发 Skill，通过同步脚本注册到 `.github/skills/`：
+
+```bash
+# 在 Linux 服务器上，每次 git pull 后执行
+bash scripts/sync-project-skills.sh
+```
+
+脚本行为：
+1. 遍历 `projects/*/skills/*/`
+2. 检查每个 skill 下是否有 `SKILL.md`
+3. 在 `.github/skills/` 下创建符号链接（symlink）
+4. 已存在的公共 Skill（非链接目录）不会被覆盖
+
+```
+projects/demo-project/skills/demo-review/
+        │
+        │  symlink
+        ▼
+.github/skills/demo-review/ → ../../../projects/demo-project/skills/demo-review/
+```
+
+### 6.6 自动上下文注入（Instructions）
+
+`.github/instructions/project-context.instructions.md` 配置了 `applyTo: "projects/**"`。
+
+当用户在 Copilot 中引用 `projects/` 下的文件时，该 instruction 会**自动注入**，指导 Agent：
+
+1. 从文件路径提取项目名
+2. 读取该项目的 `context/` 目录
+3. 优先查找并使用项目专属 Skill
+
+这意味着用户不需要手动调用 `/xf-project-ctx`，只要操作的是项目文件，上下文就会自动加载。
 
 ---
 
-## 7. 版本管理
+## 7. 现有 Skill 清单
+
+| Skill | 类型 | 版本 | 斜杠命令 | 状态 | 说明 |
+|-------|------|------|---------|------|------|
+| xf-review | 公共 | v1.0.0 | `/xf-review` | ✅ 可用 | 通用代码审查 |
+| xf-project-ctx | 公共 | v1.0.0 | `/xf-project-ctx` | ✅ 可用 | 项目上下文加载器/调度器 |
+| demo-review | 项目专属 | v1.0.0 | `/demo-review` | ✅ 可用 | demo-project 专属代码审查 |
+
+---
+
+## 8. 版本管理
 
 ### 语义化版本号
 
@@ -238,9 +377,9 @@ PATCH — 向后兼容的 bug 修复
 
 ---
 
-## 8. 开发工作流
+## 9. 开发工作流
 
-### 新建 Skill 流程
+### 新建公共 Skill 流程
 
 ```
 1. 复制脚手架       shared/templates/skill-template/ → .github/skills/<name>/
@@ -250,6 +389,18 @@ PATCH — 向后兼容的 bug 修复
 5. 提交 PR          附带测试场景说明
 6. Code Review      至少 1 人 review
 7. 合并发布         更新 CHANGELOG、打 tag
+```
+
+### 新建项目专属 Skill 流程
+
+```
+1. 创建项目目录     projects/<项目名>/ （如不存在）
+2. 编写上下文     projects/<项目名>/context/ 下创建 .md 文件
+3. 创建 Skill      projects/<项目名>/skills/<项目缩写>-<功能>/SKILL.md
+4. Skill 中引用      在 SKILL.md 中写明“Before You Start”读取 context/ 文件
+5. 同步注册       bash scripts/sync-project-skills.sh
+6. 测试验证         在 VS Code 中验证 Skill 发现 + 上下文加载
+7. 提交推送         git push 到远端分支
 ```
 
 ### Skill Review 检查清单
@@ -267,7 +418,7 @@ PATCH — 向后兼容的 bug 修复
 
 ---
 
-## 9. 反模式 & 最佳实践
+## 10. 反模式 & 最佳实践
 
 ### 避免的反模式
 
@@ -292,32 +443,35 @@ PATCH — 向后兼容的 bug 修复
 
 ---
 
-## 10. 迭代路线图
+## 11. 迭代路线图
 
 ### 阶段 1：基础搭建 ✅
 
 - [x] 建立标准目录结构 `.github/skills/`
-- [x] 完成首个 Skill `xf-review` 并通过 VS Code 识别验证
+- [x] 完成首个公共 Skill `xf-review`
 - [x] 编写架构设计文档
 
-### 阶段 2：夯实基础
+### 阶段 2：子项目架构 ✅
 
-- [ ] 补充 `shared/` 共享资源目录
-- [ ] 创建 Skill 脚手架模板 `shared/templates/skill-template/`
-- [ ] 编写 `docs/how-to-create-skill.md` 开发指南
-- [ ] 添加 `CHANGELOG.md`
+- [x] 建立 `projects/` 子项目目录规范
+- [x] 创建 `xf-project-ctx` 公共调度 Skill
+- [x] 创建 `.github/instructions/` 自动上下文注入
+- [x] 创建示例项目 `demo-project` 及其专属 Skill
+- [x] 创建 `scripts/sync-project-skills.sh` 同步脚本
 
-### 阶段 3：扩展 Skill
+### 阶段 3：团队落地
 
-- [ ] 开发 `xf-doc-gen`（文档生成）
-- [ ] 开发 `xf-debug`（调试助手）
-- [ ] 对 `xf-review` 进行迭代优化（支持更多语言、输出格式优化）
+- [ ] 将实际项目接入 `projects/` 目录
+- [ ] 团队成员开始开发项目专属 Skill
+- [ ] 在 Linux 服务器上验证完整流程（push → pull → sync → 调用）
+- [ ] 收集反馈并迭代优化
 
 ### 阶段 4：工程化
 
-- [ ] 添加 CI/CD：Skill 格式校验、安全扫描（`.github/workflows/skill-validation.yml`）
+- [ ] 添加 CI/CD：Skill 格式校验、安全扫描
+- [ ] `git pull` 后自动运行 sync 脚本（git hook）
 - [ ] 自动同步 `shared/` → 各 Skill 的 `references/`
-- [ ] 建立 Skill review 流程和检查清单
+- [ ] Skill 使用统计和效果评估
 
 ---
 

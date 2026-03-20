@@ -1,0 +1,7 @@
+{
+    "chat.agentSkillsLocations": {
+        ".skills": true,
+        "./skills": true,
+        "./skills/code-reviewer": true
+    }
+}

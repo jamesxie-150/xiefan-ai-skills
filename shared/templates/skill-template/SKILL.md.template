@@ -1,0 +1,32 @@
+---
+name: skill-name
+description: "Skill 功能描述。Use when: 关键词1, 关键词2, 关键词3。补充说明。"
+argument-hint: "可选的斜杠命令参数提示"
+---
+
+# Skill 标题
+
+简要说明此 Skill 的功能。
+
+## When to Use
+
+- 用户要求 xxx
+- 用户使用 `/skill-name` 命令
+- 其他触发场景
+
+## Procedure
+
+1. 读取用户提供的输入
+2. 按照 [参考文档](./references/example.md) 中的规范进行分析
+3. 按输出格式返回结果
+
+## Output Format
+
+```
+[输出格式说明]
+```
+
+## Limitations
+
+- 边界说明 1
+- 边界说明 2

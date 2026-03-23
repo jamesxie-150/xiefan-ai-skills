@@ -33,6 +33,7 @@ docs/                             # 开发文档
 |-------|------|---------|------|
 | xf-review | v1.0.0 | `/xf-review` | 通用代码审查 |
 | xf-project-ctx | v1.0.0 | `/xf-project-ctx` | 项目上下文加载 + 项目 Skill 调度 |
+| xf-radiology-schedule | v1.1.0 | `/xf-radiology-schedule` | 放射科周排班工时盈亏计算器 |
 
 ### 项目专属 Skill
 

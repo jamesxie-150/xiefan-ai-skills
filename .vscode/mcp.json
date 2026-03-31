@@ -1,0 +1,93 @@
+{
+  "servers": {
+    // ============================================
+    // 🎨 AI 图像/视频生成 — ComfyUI
+    // 用途: 配合 xf-text2video Skill，通过 ComfyUI 生成动画视频
+    // 前置: 需要本地运行 ComfyUI (http://127.0.0.1:8188)
+    // ============================================
+    "comfyui": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "mcp-comfyui", "--comfyui-url", "http://127.0.0.1:8188"]
+    },
+
+    // ============================================
+    // 🌐 网页抓取 — Fetch
+    // 用途: 获取网页内容、调用 REST API、收集在线资料
+    // 示例: 抓取文档页面、获取 API 响应
+    // ============================================
+    "fetch": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["mcp-server-fetch"]
+    },
+
+    // ============================================
+    // 📂 文件系统 — Filesystem
+    // 用途: 安全的文件读写、目录浏览和搜索
+    // 权限: 仅限指定目录内操作
+    // ============================================
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "d:\\AI-development-code\\xiefan-ai-skills"
+      ]
+    },
+
+    // ============================================
+    // 🧠 知识图谱记忆 — Memory
+    // 用途: 持久化存储实体和关系，构建跨会话知识图谱
+    // 存储: 本地 JSON 文件
+    // ============================================
+    "memory": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    },
+
+    // ============================================
+    // 💡 结构化思考 — Sequential Thinking
+    // 用途: 复杂问题分步推理、规划和决策
+    // ============================================
+    "sequential-thinking": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+
+    // ============================================
+    // 🐙 GitHub 操作
+    // 用途: 仓库管理、Issue/PR 操作、代码搜索
+    // 前置: 需设置 GITHUB_PERSONAL_ACCESS_TOKEN 环境变量
+    // ============================================
+    "github": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${input:github_token}"
+      }
+    },
+
+    // ============================================
+    // 🎭 浏览器自动化 — Playwright
+    // 用途: 网页截图、自动化操作、爬取动态渲染页面
+    // ============================================
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-playwright"]
+    }
+  },
+  "inputs": [
+    {
+      "id": "github_token",
+      "type": "promptString",
+      "description": "GitHub Personal Access Token (用于 GitHub MCP 服务器)",
+      "password": true
+    }
+  ]
+}

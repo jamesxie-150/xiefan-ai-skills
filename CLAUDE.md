@@ -30,6 +30,11 @@
 ✅ 放射科排班计算 → xf-radiology-schedule
 ✅ 代码审查助手   → xf-review
 ✅ 文本转视频生成 → xf-text2video
+✅ Skill 创建工厂 → agent-skill-creator
+✅ Word 文档处理  → docx (Anthropic)
+✅ PDF 文档处理   → pdf (Anthropic)
+✅ PPT 演示文稿   → pptx (Anthropic)
+✅ Excel 电子表格 → xlsx (Anthropic)
 ```
 
 > 如有新增 Skill，请同步更新此列表。
